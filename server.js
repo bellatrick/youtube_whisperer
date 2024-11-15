@@ -23,8 +23,8 @@ const transcribeAudio = async (file) => {
     content_safety_confidence: 60
   };
   const transcript = await client.transcripts.transcribe(params);
-  console.log(transcript);
   const contentSafetyLabels = transcript.content_safety_labels;
+  console.log(contentSafetyLabels);
 
   return transcript;
 };
@@ -66,7 +66,6 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
 function isYouTubeLink(url) {
   return url.includes('youtube.com') || url.includes('youtu.be');
 }
-
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

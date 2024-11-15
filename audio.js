@@ -1,7 +1,8 @@
 const youtubedl = require('youtube-dl-exec');
 const fs = require('fs').promises;
 const path = require('path');
-const downloadDir = path.join(process.cwd(), 'temp_audio');
+const tempDir = process.env.TMPDIR || '/tmp';
+const downloadDir = path.join(tempDir, 'temp_audio');
 
 async function ensureDownloadDir() {
   try {
