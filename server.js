@@ -1,6 +1,6 @@
 const { AssemblyAI } = require('assemblyai');const express = require('express');
 const multer = require('multer');
-const {  getYoutubeUrl } = require('./audio');
+const {  downloadAudio } = require('./audio');
 const app = express();
 const PORT = 4000;
 
@@ -43,7 +43,7 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
       if (isYouTubeLink(audioUrl)) {
         // Handle YouTube URL
         //  const audioFilePath = await downloadAudio(audioUrl);
-        const audioFilePath = await getYoutubeUrl(audioUrl);
+        const audioFilePath = await downloadAudio(audioUrl);
         const transcript = await transcribeAudio(audioFilePath);
         if (transcript.error){
           res.status(500).json({ error: transcript.error });

@@ -51,8 +51,6 @@ async function downloadAudio(videoUrl) {
 async function getYoutubeUrl(url){
   const videoInfo = await youtubedl(url, {
     dumpSingleJson: true,
-    noCheckCertificates: true,
-    noWarnings: true,
     preferFreeFormats: true,
     addHeader: ["referer:youtube.com", "user-agent:googlebot"],
   });
