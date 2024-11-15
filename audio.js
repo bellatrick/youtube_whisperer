@@ -38,7 +38,12 @@ async function downloadAudio(videoUrl) {
       audioFile = file;
     } else {
       console.log('Downloading audio...');
+     try {
       await youtubedl(videoUrl, options);
+     } catch (error) {
+      console.error('Error downloading audio:', error.message);
+      return;
+     }
 
       // Refresh the file list after downloading
       const updatedFiles = await fs.readdir(downloadDir);
