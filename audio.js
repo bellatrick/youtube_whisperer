@@ -12,9 +12,12 @@ async function ensureDownloadDir() {
 }
 async function downloadAudio(videoUrl) {
   let audioFile;
+
+  // Ensure the download directory exists before trying to access it
+  await ensureDownloadDir();
+
   // Get the actual output filename
   const files = await fs.readdir(downloadDir);
-  await ensureDownloadDir();
 
   const outputTemplate = path.join(downloadDir, '%(id)s.%(ext)s');
 
@@ -24,19 +27,22 @@ async function downloadAudio(videoUrl) {
     output: outputTemplate,
     noPlaylist: true,
     retries: 3,
-    maxFilesize: '100m' // Adjust based on your needs
+    maxFilesize: '100m', // Adjust based on your needs
   };
 
   try {
+    // Check if the file already exists in the download directory
     const file = files.find((file) => file.includes(videoUrl.split('v=')[1]));
     if (file) {
       audioFile = file;
     } else {
       console.log('Downloading audio...');
       await youtubedl(videoUrl, options);
-    }
 
-    audioFile = file;
+      // Refresh the file list after downloading
+      const updatedFiles = await fs.readdir(downloadDir);
+      audioFile = updatedFiles.find((file) => file.includes(videoUrl.split('v=')[1]));
+    }
 
     if (!audioFile) {
       throw new Error('Downloaded file not found');
