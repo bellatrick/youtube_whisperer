@@ -3,14 +3,22 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Use environment variable for temp directory with fallback
-const tempDir = process.env.TEMP_DIR || process.env.TMPDIR || '/tmp';
-const downloadDir = path.join(tempDir, 'temp_audio');
+//const tempDir = process.env.TEMP_DIR || process.env.TMPDIR || '/tmp';
+const downloadDir = path.join(process.cwd(), 'temp_audio');
 
-// Add more detailed logging
+// Add more detailed logging with timestamp
 const log = (message, data = '') => {
-  console.log(`[YouTube Downloader] ${message}`, data);
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}][YouTube Downloader] ${message}`, data);
 };
 
+// Extract video ID from the YouTube URL
+function extractVideoId(videoUrl) {
+  const match = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+  return match ? match[1] : null;
+}
+
+// Ensure the download directory exists
 async function ensureDownloadDir() {
   try {
     await fs.access(downloadDir);
@@ -21,26 +29,70 @@ async function ensureDownloadDir() {
   }
 }
 
+// Cleanup old files (older than 1 hour)
 async function cleanupOldFiles() {
   try {
     const files = await fs.readdir(downloadDir);
     const currentTime = Date.now();
 
-    for (const file of files) {
-      const filePath = path.join(downloadDir, file);
-      const stats = await fs.stat(filePath);
+    await Promise.all(
+      files.map(async (file) => {
+        try {
+          const filePath = path.join(downloadDir, file);
+          const stats = await fs.stat(filePath);
 
-      // Remove files older than 1 hour
-      if (currentTime - stats.mtimeMs > 3600000) {
-        await fs.unlink(filePath);
-        log(`Cleaned up old file: ${file}`);
-      }
-    }
+          // Remove files older than 1 hour
+          if (currentTime - stats.mtimeMs > 3600000) {
+            await fs.unlink(filePath);
+            log(`Cleaned up old file: ${file}`);
+          }
+        } catch (fileError) {
+          log(`Error cleaning file ${file}:`, fileError.message);
+        }
+      })
+    );
   } catch (error) {
     log('Error during cleanup:', error.message);
   }
 }
 
+// Retry download function
+async function retryDownload(videoUrl, options, retries = 3, delay = 2000) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      log(`Attempt ${attempt + 1} to download: ${videoUrl}`);
+      await youtubedl(videoUrl, options);
+      return; // Exit on successful download
+    } catch (downloadError) {
+      log(`Download attempt ${attempt + 1} failed: ${downloadError.message}`);
+      if (attempt < retries - 1) {
+        log(`Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        throw new Error('Maximum retries reached. Download failed.');
+      }
+    }
+  }
+}
+
+// Verify if a file exists and is readable with retries
+async function waitForFile(filePath, retries = 3, delay = 1000) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      await fs.access(filePath, fs.constants.R_OK);
+      return true;
+    } catch {
+      if (attempt < retries - 1) {
+        log(`File not found, retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        throw new Error('File verification failed after multiple attempts');
+      }
+    }
+  }
+}
+
+// Main download function
 async function downloadAudio(videoUrl) {
   let audioFile;
 
@@ -50,10 +102,7 @@ async function downloadAudio(videoUrl) {
     await cleanupOldFiles();
 
     // Extract video ID from URL
-    const videoId = videoUrl.includes('v=')
-      ? videoUrl.split('v=')[1].split('&')[0]
-      : videoUrl.split('/').pop();
-
+    const videoId = extractVideoId(videoUrl);
     if (!videoId) {
       throw new Error('Invalid YouTube URL');
     }
@@ -82,9 +131,9 @@ async function downloadAudio(videoUrl) {
       verbose: true, // Enable verbose logging
     };
 
-    // Download the audio
+    // Retry the download
     log('Starting download...');
-    await youtubedl(videoUrl, options);
+    await retryDownload(videoUrl, options);
     log('Download completed');
 
     // Find the downloaded file
@@ -101,7 +150,7 @@ async function downloadAudio(videoUrl) {
     log('Final audio file path:', finalPath);
 
     // Verify file exists and is readable
-    await fs.access(finalPath, fs.constants.R_OK);
+    await waitForFile(finalPath);
 
     return finalPath;
   } catch (error) {
