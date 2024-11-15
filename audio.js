@@ -54,7 +54,7 @@ async function getYoutubeUrl(url){
     noCheckCertificates: true,
     noWarnings: true,
     preferFreeFormats: true,
-    addHeader: ["referer:youtube.com", "user-agent:googlebot",  "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"],
+    addHeader: ["referer:youtube.com", "user-agent:googlebot"],
   });
 
   const audioUrl = videoInfo.formats.reverse().find(
