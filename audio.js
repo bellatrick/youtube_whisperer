@@ -19,7 +19,7 @@ async function downloadAudio(videoUrl) {
 
   // Get the actual output filename
   const files = await fs.readdir(downloadDir);
-
+  console.log(files);
   const outputTemplate = path.join(downloadDir, '%(id)s.%(ext)s');
 
   const options = {
@@ -42,6 +42,7 @@ async function downloadAudio(videoUrl) {
 
       // Refresh the file list after downloading
       const updatedFiles = await fs.readdir(downloadDir);
+      console.log(updatedFiles);
       audioFile = updatedFiles.find((file) => file.includes(videoUrl.split('v=')[1]));
     }
 
