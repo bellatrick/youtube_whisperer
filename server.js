@@ -1,6 +1,6 @@
 const { AssemblyAI } = require('assemblyai');const express = require('express');
 const multer = require('multer');
-const {  downloadAudio } = require('./audio');
+const {  getYoutubeAudio } = require('./audio');
 const app = express();
 const PORT = 4000;
 
@@ -25,9 +25,9 @@ const transcribeAudio = async (file) => {
   };
   const transcript = await client.transcripts.transcribe(params);
   const contentSafetyLabels = transcript.content_safety_labels;
-  console.log(contentSafetyLabels);
+  console.log(transcript,contentSafetyLabels);
 
-  return transcript;
+  return contentSafetyLabels;
 };
 
 // Upload audio or provide a URL
@@ -43,11 +43,11 @@ app.post('/upload', upload.single('audio'), async (req, res) => {
       // If it's a URL input
       if (isYouTubeLink(audioUrl)) {
         // Handle YouTube URL
-        //  const audioFilePath = await downloadAudio(audioUrl);
-        const audioFilePath = await downloadAudio(audioUrl);
+        //  const audioFilePath = await getYoutubeAudio(audioUrl);
+        const audioFilePath = await getYoutubeAudio(audioUrl);
         const transcript = await transcribeAudio(audioFilePath);
         if (transcript.error){
-          res.status(500).json({ error: transcript.error });
+           return res.status(500).json({ error: transcript.error });
         }
         else return res.json({ transcript });
       } else {
