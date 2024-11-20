@@ -24,13 +24,15 @@ async function getYoutubeAudio(youtubeUrl) {
         const download = youtubedl.exec(youtubeUrl, {
             extractAudio: true,
             audioFormat: 'mp3',
-            output: '-', // Output to stdout
+            output: '-',
+            username:"oauth2",
+            password:""
         });
 
         // Create readable stream from stdout
         console.debug('[getYoutubeAudio] Creating audio stream...');
         const audioStream = new Readable();
-        audioStream._read = () => {}; // Required implementation
+        audioStream._read = () => {}; 
 
         return new Promise((resolve, reject) => {
             const chunks = [];
