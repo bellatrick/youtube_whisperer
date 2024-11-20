@@ -1,14 +1,10 @@
-const express = require('express');
-const { AssemblyAI } = require('assemblyai');
+const express = require('express');const { AssemblyAI } = require('assemblyai');
 const cors = require('cors');
 require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const {
-  cleanMarkdownString,
   analyzeContent,
   handleFileUpload,
-  handleTranslation,
-  handleAIResponse
+  handleAIResponse,
 } = require('./helperFunctions');
 
 const app = express();
@@ -28,17 +24,17 @@ app.post('/api/generate-blog', handleFileUpload, async (req, res) => {
 
     // Transcribe the file using AssemblyAI
     const transcript = await client.transcripts.transcribe({
-      audio: fileBuffer,
-      summarization: true,
-      summary_model: 'informative',
-      summary_type: 'bullets'
+      audio: fileBuffer
     });
 
-    const prompt = `Generate a markdown tutorial of the following transcript:\n\n${transcript.summary}.`;
-    const transcriptResult = await handleAIResponse(prompt);
-    console.log(transcriptResult);
-
-    res.status(200).json({ markdown: cleanMarkdownString(transcriptResult) });
+    const prompt = `Generate a markdown tutorial using the following transcript. Return just the blog article markdown directly without any leading or introductory sentences`;
+    const { response } = await client.lemur.task({
+      transcript_ids: [transcript.id],
+      prompt,
+      final_model: 'anthropic/claude-3-5-sonnet'
+    });
+    
+    res.status(200).json({ markdown: response });
   } catch (error) {
     console.error('Error generating blog:', error);
     res.status(500).json({
@@ -86,8 +82,9 @@ app.post('/api/analyze-content', handleFileUpload, async (req, res) => {
 app.post('/api/translate-content', handleFileUpload, async (req, res) => {
   try {
     const fileBuffer = req.file.buffer;
-    const target_language = req.target_language;
+    const target_language = req.body.target_language;
     //detect language using assembly ai
+    console.log(target_language);
 
     const transcript = await client.transcripts.transcribe({
       audio: fileBuffer,
@@ -99,16 +96,18 @@ app.post('/api/translate-content', handleFileUpload, async (req, res) => {
 
     const text = transcript.text;
     const language_code = transcript.language_code;
-    const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text:\n\n${text}.`;
+    const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text:\n\n${text}. Return just your translation text directly without any leading or introductory sentences`;
 
-
-    const translation = await handleAIResponse(prompt);
+    const { response } = await client.lemur.task({
+      transcript_ids: [transcript.id],
+      prompt,
+      final_model: 'anthropic/claude-3-5-sonnet'
+    });
 
     res.status(200).json({
-
-      translation: translation,
+      translation: response,
       transcript: text,
-      language:language_code
+      language: language_code
     });
   } catch (error) {
     console.error('Error analyzing content:', error);
@@ -116,6 +115,63 @@ app.post('/api/translate-content', handleFileUpload, async (req, res) => {
       error: true,
       message: 'An error occurred while analyzing the content. Please try again'
     });
+  }
+});
+
+app.post('/api/fluency-analyzer', handleFileUpload, async (req, res) => {
+  try {
+    const fileBuffer = req.file.buffer;
+
+    const transcript = await client.transcripts.transcribe({
+      audio: fileBuffer,
+      disfluencies: true
+    });
+    if (transcript.error) {
+      return res.status(400).json({ error: true, message: transcript.error });
+    }
+    const transcriptId = transcript.id;
+    console.log(transcript.text);
+    const prompt = `Analyze the provided transcript for the frequency and types of filler words used by the speaker (e.g., "um," "uh," "like," "you know"). Additionally:
+    Identify patterns or situations where filler words are most frequently used (e.g., during transitions, pauses, or when explaining complex ideas).
+    Provide constructive suggestions to help the speaker reduce filler words, such as techniques for improving confidence, pacing, or preparation.
+    Offer a brief review of the speaker's overall communication skills, including strengths and areas for improvement.
+    Rate the speaker’s speech delivery on a scale of 1 to 10, considering clarity, engagement, and professionalism. Return your response in a markdown format. Return just your analysis directly without any leading or introductory sentences`;
+
+    const { response } = await client.lemur.task({
+      transcript_ids: [transcriptId],
+      prompt,
+      final_model: 'anthropic/claude-3-5-sonnet'
+    });
+
+    console.log(response);
+    res.status(200).json({
+      suggestions: response
+    });
+  } catch (error) {
+    console.error('Error analyzing content:', error);
+    res.status(500).json({
+      error: true,
+      message: 'An error occurred while analyzing the content. Please try again'
+    });
+  }
+});
+
+app.get('/api/get-topics', async (req, res) => {
+  const prompt =
+    'Help me improve my speaking fluency by generating 5 random and engaging topics for a 1-minute speech. The topics should be diverse and thought-provoking to help me practice effectively.';
+  try {
+    const response = await handleAIResponse(prompt);
+    if (response) {
+      return res.status(200).json({ topics: response });
+    } else
+      return res
+        .status(500)
+        .json({ message: 'Something went wrong with the request, try again' });
+  } catch (error) {
+    console.log(error.message);
+    return res
+      .status(500)
+      .json({ message: 'Something went wrong with the request, try again' });
   }
 });
 

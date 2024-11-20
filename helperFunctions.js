@@ -1,7 +1,9 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');const { default: axios } = require('axios');
 const multer = require('multer');
 require('dotenv').config();
 const { Translate } = require('@google-cloud/translate').v2;
+
+const api_key = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
 const translate = new Translate({
   projectId: 'twitter-e364c',
@@ -22,6 +24,7 @@ const handleTranslation = async (text) => {
 };
 
 const storage = multer.memoryStorage();
+
 const upload = multer({
   storage: storage,
   limits: {
@@ -29,6 +32,7 @@ const upload = multer({
     files: 1 // Allow only 1 file per request
   }
 }).single('file');
+
 function formatTimestamp(milliseconds) {
   const totalSeconds = Math.floor(milliseconds / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -103,7 +107,7 @@ const handleFileUpload = async (req, res, next) => {
     next();
   });
 };
-const api_key = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
 const handleAIResponse = async (prompt) => {
   try {
     const genAI = new GoogleGenerativeAI(api_key);
@@ -115,11 +119,38 @@ const handleAIResponse = async (prompt) => {
   }
 };
 
+const handleTranslate = async (text, target_language, origin_language) => {
+  console.log(text,target_language,origin_language)
+  const options = {
+    method: 'POST',
+    url: 'https://translateai.p.rapidapi.com/google/translate/text',
+    headers: {
+      'x-rapidapi-key': process.env.RAPID_API_KEY,
+      'x-rapidapi-host': 'translateai.p.rapidapi.com',
+      'Content-Type': 'application/json'
+    },
+    data: {
+      target_language,
+      origin_language,
+      input_text: text
+    }
+  };
+
+  try {
+    const response = await axios.request(options);
+    return response.data.translation;
+  } catch (error) {
+    console.error(error);
+    throw new Error(error.message);
+  }
+};
+
 module.exports = {
   formatTimestamp,
   analyzeContent,
   cleanMarkdownString,
   handleFileUpload,
   handleTranslation,
-  handleAIResponse
+  handleAIResponse,
+  handleTranslate
 };
