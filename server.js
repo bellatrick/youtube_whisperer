@@ -4,7 +4,7 @@ require('dotenv').config();
 const {
   analyzeContent,
   handleFileUpload,
-  handleAIResponse,
+  handleAIResponse
 } = require('./helperFunctions');
 
 const app = express();
@@ -33,7 +33,7 @@ app.post('/api/generate-blog', handleFileUpload, async (req, res) => {
       prompt,
       final_model: 'anthropic/claude-3-5-sonnet'
     });
-    
+
     res.status(200).json({ markdown: response });
   } catch (error) {
     console.error('Error generating blog:', error);
@@ -94,9 +94,8 @@ app.post('/api/translate-content', handleFileUpload, async (req, res) => {
       return res.status(400).json({ error: true, message: transcript.error });
     }
 
-    const text = transcript.text;
     const language_code = transcript.language_code;
-    const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text:\n\n${text}. Return just your translation text directly without any leading or introductory sentences`;
+    const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text. Return just your translation text directly without any leading or introductory sentences`;
 
     const { response } = await client.lemur.task({
       transcript_ids: [transcript.id],
@@ -147,6 +146,47 @@ app.post('/api/fluency-analyzer', handleFileUpload, async (req, res) => {
     res.status(200).json({
       suggestions: response
     });
+  } catch (error) {
+    console.error('Error analyzing content:', error);
+    res.status(500).json({
+      error: true,
+      message: 'An error occurred while analyzing the content. Please try again'
+    });
+  }
+});
+
+app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
+  try {
+    const fileBuffer = req.file.buffer;
+    const target_language = req.body.target_language;
+
+    const transcript = await client.transcripts.transcribe({
+      audio: fileBuffer,
+      language_detection: true
+    });
+    if (transcript.error) {
+      return res.status(400).json({ error: true, message: transcript.error });
+    }
+    let srt = await client.transcripts.subtitles(transcript.id, 'srt');
+    console.log(srt);
+    const language_code = transcript.language_code;
+
+    if (target_language === 'en') {
+      return res.status(200).json({ subtitle: srt, language: language_code });
+    } else {
+      const prompt = `This is a ${language_code} subtitle text. Provide the ${target_language} translation of the subtitle texts:\n\n${srt}. Return just your translation text directly without any leading or introductory sentences`;
+      const { response } = await client.lemur.task({
+        transcript_ids: [transcript.id],
+        prompt,
+        final_model: 'anthropic/claude-3-5-sonnet'
+      });
+      console.log(response);
+      return res.status(200).json({
+        translation: response,
+        subtitle: srt,
+        language: language_code
+      });
+    }
   } catch (error) {
     console.error('Error analyzing content:', error);
     res.status(500).json({
