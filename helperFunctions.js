@@ -146,22 +146,21 @@ const handleTranslate = async (text, target_language, origin_language) => {
   }
 };
 function formatSubtitleText(singleLineText) {
-  const subtitleParts = singleLineText.match(
-    /\d+\s\d{2}:\d{2}:\d{2},\d{3}\s-->\s\d{2}:\d{2}:\d{2},\d{3}.*?(?=\d+\s\d{2}:\d{2}:\d{2},\d{3}\s-->|$)/g
-  );
+  const subtitleParts = singleLineText.match(/\d+\s\d{2}:\d{2}:\d{2},\d{3}\s-->\s\d{2}:\d{2}:\d{2},\d{3}.*?(?=\d+\s\d{2}:\d{2}:\d{2},\d{3}\s-->|$)/g);
 
   if (!subtitleParts) {
-    return 'Invalid subtitle format.';
+    return "Invalid subtitle format.";
   }
 
   return subtitleParts
     .map((part) => {
-      const [index, ...rest] = part
-        .trim()
-        .split(/\s(?=\d{2}:\d{2}:\d{2},\d{3}\s-->\s\d{2}:\d{2}:\d{2},\d{3})/);
-      return `${index}\n${rest.join(' ')}`;
+
+      const parts = part.trim().split(/\s(?=\d{2}:\d{2}:\d{2},\d{3}\s-->\s\d{2}:\d{2}:\d{2},\d{3})/);
+
+
+      return `${parts[0]}\n${parts[1]}\n${parts.slice(2).join(" ")}`;
     })
-    .join('\n\n');
+    .join("\n\n"); 
 }
 
 module.exports = {
