@@ -182,7 +182,8 @@ app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
       const { response } = await client.lemur.task({
         transcript_ids: [transcript.id],
         prompt,
-        final_model: 'anthropic/claude-3-5-sonnet'
+        final_model: 'anthropic/claude-3-5-sonnet'.
+        max_output_size:4000
       });
       return res.status(200).json({
         translation: response,
@@ -194,7 +195,7 @@ app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
     console.error('Error analyzing content:', error);
     res.status(500).json({
       error: true,
-      message: 'An error occurred while analyzing the content. Please try again'
+      message: error+' Your file might be too large to complete this operation.'
     });
   }
 });
