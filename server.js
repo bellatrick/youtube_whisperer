@@ -171,20 +171,19 @@ app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
       return res.status(400).json({ error: true, message: transcript.error });
     }
     let srt = await client.transcripts.subtitles(transcript.id, 'srt');
-    console.log(srt);
     const language_code = transcript.language_code;
 
     if (target_language === 'en') {
       return res.status(200).json({ subtitle: srt, language: language_code });
     } else {
       const language=languages
-      const prompt = `This is a ${language_code} text. I am a native speaker of ${languages[target_language].name}, please provide the translation of the texts:\n\n${srt}. Return just your translation text directly without any leading or introductory sentences. If you can't just say [Language not supported]`;
+      const prompt = `This is a ${language_code} text. I am a native speaker of ${languages[target_language].name}, please provide the subtitle translation of the texts in the srt format. Return just your subititle translation text directly without any leading or introductory sentences.`;
+      console.log(languages[target_language].name)
       const { response } = await client.lemur.task({
         transcript_ids: [transcript.id],
         prompt,
         final_model: 'anthropic/claude-3-5-sonnet'
       });
-      console.log(response);
       return res.status(200).json({
         translation: response,
         subtitle: srt,
