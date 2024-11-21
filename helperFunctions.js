@@ -146,29 +146,22 @@ const handleTranslate = async (text, target_language, origin_language) => {
   }
 };
 function formatSubtitleText(input) {
-  // Split the input into lines
-  const lines = input.split('\n');
+  // Replace multiple spaces with single space
+  input = input.replace(/\s+/g, ' ');
 
-  // Process each line
-  const reformattedLines = lines.map((line, index) => {
-      // Trim whitespace
-      line = line.trim();
+  // Match all timestamp entries
+  const entries = input.match(/(\d+)\s+(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})\s*([^0-9]+)(?=\d+\s+\d{2}:\d{2}:\d{2}|$)/g);
 
-      // Check if line contains timestamp
-      const timestampMatch = line.match(/^(\d+)\s+(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})\s*(.+)?$/);
+  // Reformat each entry
+  const reformattedEntries = entries.map(entry => {
+      // Extract components
+      const match = entry.match(/(\d+)\s+(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})\s*(.+)/);
 
-      if (timestampMatch) {
-          const [, indexNum, startTime, endTime, text] = timestampMatch;
-
-          // Format with each component on a new line
-          return `${indexNum}\n${startTime} --> ${endTime}\n${text || ''}`.trim();
-      }
-
-      return line;
+      // Return reformatted entry
+      return `${match[1]}\n${match[2]} --> ${match[3]}\n${match[4].trim()}`;
   });
 
-  // Join the reformatted lines
-  return reformattedLines.join('\n');
+  return reformattedEntries.join('\n\n');
 }
 
 module.exports = {
@@ -181,6 +174,7 @@ module.exports = {
   handleTranslate,
   formatSubtitleText
 };
+
 
 
 
