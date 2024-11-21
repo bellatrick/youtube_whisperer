@@ -1,4 +1,5 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');const { default: axios } = require('axios');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { default: axios } = require('axios');
 const multer = require('multer');
 require('dotenv').config();
 const { Translate } = require('@google-cloud/translate').v2;
@@ -120,7 +121,7 @@ const handleAIResponse = async (prompt) => {
 };
 
 const handleTranslate = async (text, target_language, origin_language) => {
-  console.log(text,target_language,origin_language)
+  console.log(text, target_language, origin_language);
   const options = {
     method: 'POST',
     url: 'https://translateai.p.rapidapi.com/google/translate/text',
@@ -144,6 +145,24 @@ const handleTranslate = async (text, target_language, origin_language) => {
     throw new Error(error.message);
   }
 };
+function formatSubtitleText(singleLineText) {
+  const subtitleParts = singleLineText.match(
+    /\d+\s\d{2}:\d{2}:\d{2},\d{3}\s-->\s\d{2}:\d{2}:\d{2},\d{3}.*?(?=\d+\s\d{2}:\d{2}:\d{2},\d{3}\s-->|$)/g
+  );
+
+  if (!subtitleParts) {
+    return 'Invalid subtitle format.';
+  }
+
+  return subtitleParts
+    .map((part) => {
+      const [index, ...rest] = part
+        .trim()
+        .split(/\s(?=\d{2}:\d{2}:\d{2},\d{3}\s-->\s\d{2}:\d{2}:\d{2},\d{3})/);
+      return `${index}\n${rest.join(' ')}`;
+    })
+    .join('\n\n');
+}
 
 module.exports = {
   formatTimestamp,
@@ -152,5 +171,9 @@ module.exports = {
   handleFileUpload,
   handleTranslation,
   handleAIResponse,
-  handleTranslate
+  handleTranslate,
+  formatSubtitleText
 };
+
+
+

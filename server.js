@@ -1,13 +1,14 @@
 const express = require('express');const { AssemblyAI } = require('assemblyai');
 const cors = require('cors');
-const { languages } = require('countries-list');
+//const { languages } = require('countries-list');
 require('dotenv').config();
 
 const {
   analyzeContent,
   handleFileUpload,
   handleAIResponse,
-  handleTranslate
+  handleTranslate,
+  formatSubtitleText
 } = require('./helperFunctions');
 
 const app = express();
@@ -104,13 +105,6 @@ app.post('/api/translate-content', handleFileUpload, async (req, res) => {
       target_language,
       language_code
     );
-    // const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text. Return just your translation text directly without any leading or introductory sentences`;
-
-    // const { response } = await client.lemur.task({
-    //   transcript_ids: [transcript.id],
-    //   prompt,
-    //   final_model: 'anthropic/claude-3-5-sonnet'
-    // });
 
     response &&
       res.status(200).json({
@@ -197,9 +191,10 @@ app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
       //   final_model: 'anthropic/claude-3-5-sonnet',
       //   max_output_size:4000
       // });
-      if (response) {
+      const subtitleText = formatSubtitleText(response);
+      if (response && subtitleText) {
         return res.status(200).json({
-          translation: response,
+          translation: subtitleText,
           subtitle: srt,
           language: language_code
         });
