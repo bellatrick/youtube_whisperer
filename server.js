@@ -182,7 +182,7 @@ app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
       const { response } = await client.lemur.task({
         transcript_ids: [transcript.id],
         prompt,
-        final_model: 'anthropic/claude-3-5-sonnet'.
+        final_model: 'anthropic/claude-3-5-sonnet',
         max_output_size:4000
       });
       return res.status(200).json({
