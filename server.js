@@ -1,13 +1,13 @@
-const express = require('express');
-const { AssemblyAI } = require('assemblyai');
+const express = require('express');const { AssemblyAI } = require('assemblyai');
 const cors = require('cors');
-const {languages}=require('countries-list')
+const { languages } = require('countries-list');
 require('dotenv').config();
 
 const {
   analyzeContent,
   handleFileUpload,
-  handleAIResponse
+  handleAIResponse,
+  handleTranslate
 } = require('./helperFunctions');
 
 const app = express();
@@ -91,26 +91,33 @@ app.post('/api/translate-content', handleFileUpload, async (req, res) => {
 
     const transcript = await client.transcripts.transcribe({
       audio: fileBuffer,
-      language_detection: true
+      language_detection: true,
+      max_output_size: 4000
     });
     if (transcript.error) {
       return res.status(400).json({ error: true, message: transcript.error });
     }
 
     const language_code = transcript.language_code;
-    const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text. Return just your translation text directly without any leading or introductory sentences`;
+    const response = await handleTranslate(
+      transcript.text,
+      target_language,
+      language_code
+    );
+    // const prompt = `This is a ${language_code} text. Provide the ${target_language} translation of this text. Return just your translation text directly without any leading or introductory sentences`;
 
-    const { response } = await client.lemur.task({
-      transcript_ids: [transcript.id],
-      prompt,
-      final_model: 'anthropic/claude-3-5-sonnet'
-    });
+    // const { response } = await client.lemur.task({
+    //   transcript_ids: [transcript.id],
+    //   prompt,
+    //   final_model: 'anthropic/claude-3-5-sonnet'
+    // });
 
-    res.status(200).json({
-      translation: response,
-      transcript: text,
-      language: language_code
-    });
+    response &&
+      res.status(200).json({
+        translation: response,
+        transcript: text,
+        language: language_code
+      });
   } catch (error) {
     console.error('Error analyzing content:', error);
     res.status(500).json({
@@ -176,26 +183,34 @@ app.post('/api/generate-subtitle', handleFileUpload, async (req, res) => {
     if (target_language === 'en') {
       return res.status(200).json({ subtitle: srt, language: language_code });
     } else {
-      const language=languages
-      const prompt = `This is a ${language_code} text. I am a native speaker of ${languages[target_language].name}, please provide the subtitle translation of the texts in the srt format. Return just your subititle translation text directly without any leading or introductory sentences.`;
-      console.log(languages[target_language].name)
-      const { response } = await client.lemur.task({
-        transcript_ids: [transcript.id],
-        prompt,
-        final_model: 'anthropic/claude-3-5-sonnet',
-        max_output_size:4000
-      });
-      return res.status(200).json({
-        translation: response,
-        subtitle: srt,
-        language: language_code
-      });
+      const response = await handleTranslate(
+        srt,
+        target_language,
+        language_code
+      );
+      // const language=languages
+      // const prompt = `This is a ${language_code} text. I am a native speaker of ${languages[target_language].name}, please provide the subtitle translation of the texts in the srt format. Return just your subititle translation text directly without any leading or introductory sentences.`;
+      // console.log(languages[target_language].name)
+      // const { response } = await client.lemur.task({
+      //   transcript_ids: [transcript.id],
+      //   prompt,
+      //   final_model: 'anthropic/claude-3-5-sonnet',
+      //   max_output_size:4000
+      // });
+      if (response) {
+        return res.status(200).json({
+          translation: response,
+          subtitle: srt,
+          language: language_code
+        });
+      }
     }
   } catch (error) {
     console.error('Error analyzing content:', error);
     res.status(500).json({
       error: true,
-      message: error+' Your file might be too large to complete this operation.'
+      message:
+        error + ' Your file might be too large to complete this operation.'
     });
   }
 });
